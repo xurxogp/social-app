@@ -35,7 +35,9 @@ import {
   NativeStackScreenProps,
   SearchTabNavigatorParams,
 } from '#/lib/routes/types'
+import {sanitizeDisplayName} from '#/lib/strings/display-names'
 import {augmentSearchQuery} from '#/lib/strings/helpers'
+import {languageName} from '#/locale/helpers'
 import {logger} from '#/logger'
 import {isNative, isWeb} from '#/platform/detection'
 import {listenSoftReset} from '#/state/events'
@@ -58,7 +60,13 @@ import {Text} from '#/view/com/util/text/Text'
 import {Explore} from '#/view/screens/Search/Explore'
 import {SearchLinkCard, SearchProfileCard} from '#/view/shell/desktop/Search'
 import {makeSearchQuery, parseSearchQuery} from '#/screens/Search/utils'
-import {atoms as a, useBreakpoints, useTheme as useThemeNew, web} from '#/alf'
+import {
+  atoms as a,
+  tokens,
+  useBreakpoints,
+  useTheme as useThemeNew,
+  web,
+} from '#/alf'
 import {Button, ButtonIcon, ButtonText} from '#/components/Button'
 import * as FeedCard from '#/components/FeedCard'
 import {SearchInput} from '#/components/forms/SearchInput'
@@ -321,7 +329,7 @@ function SearchLanguageDropdown({
 }) {
   const t = useThemeNew()
   const {_} = useLingui()
-  const {contentLanguages} = useLanguagePrefs()
+  const {appLanguage, contentLanguages} = useLanguagePrefs()
 
   const items = React.useMemo(() => {
     return [
@@ -338,8 +346,8 @@ function SearchLanguageDropdown({
           index === self.findIndex(t => t.code2 === lang.code2), // remove dupes (which will happen)
       )
         .map(l => ({
-          label: l.name,
-          inputLabel: l.name,
+          label: languageName(l, appLanguage),
+          inputLabel: languageName(l, appLanguage),
           value: l.code2,
           key: l.code2 + l.code3,
         }))
@@ -358,7 +366,7 @@ function SearchLanguageDropdown({
           return a.label.localeCompare(b.label)
         }),
     )
-  }, [_, contentLanguages])
+  }, [_, appLanguage, contentLanguages])
 
   const style = {
     backgroundColor: t.atoms.bg_contrast_25.backgroundColor,
@@ -1043,10 +1051,12 @@ function SearchHistory({
             <RNGHScrollView
               keyboardShouldPersistTaps="handled"
               horizontal={true}
-              style={styles.profilesRow}
-              contentContainerStyle={{
-                borderWidth: 0,
-              }}>
+              style={[
+                a.flex_row,
+                a.flex_nowrap,
+                {marginHorizontal: -tokens.space._2xl},
+              ]}
+              contentContainerStyle={[a.px_2xl, a.border_0]}>
               {selectedProfiles.slice(0, 5).map((profile, index) => (
                 <View
                   key={index}
@@ -1070,7 +1080,9 @@ function SearchHistory({
                       emoji
                       style={[pal.text, styles.profileName]}
                       numberOfLines={1}>
-                      {profile.displayName || profile.handle}
+                      {sanitizeDisplayName(
+                        profile.displayName || profile.handle,
+                      )}
                     </Text>
                   </Link>
                   <Pressable
@@ -1180,10 +1192,6 @@ const styles = StyleSheet.create({
   },
   selectedProfilesContainerMobile: {
     height: 100,
-  },
-  profilesRow: {
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
   },
   profileItem: {
     alignItems: 'center',
